@@ -97,8 +97,8 @@ def set_volume_for_all_sinks(volume_level):
                               f'{volume_level}%']
             result = run(volume_command, capture_output=True, text=True)
             if result.returncode != 0:
-                log_to_journal(f"Failed to set volume for {
-                    sink_name}: {result.stderr}", level='error')
+                log_to_journal(f"Failed to set volume for {sink_name}:"\
+                               f" {result.stderr}", level='error')
                 return False
         return True
     except Exception as e:
