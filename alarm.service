@@ -1,0 +1,16 @@
+[Unit]
+Description=My Alarm Clock service            
+After=pipewire.service
+
+[Service]
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+Type=simple
+ExecStart=/home/david/alarm/start.bash python /home/david/alarm/alarm.py &
+Restart=on-failure
+Slice=session.slice
+Environment=GIO_USE_VFS=local
+
+[Install]
+WantedBy=default.target
