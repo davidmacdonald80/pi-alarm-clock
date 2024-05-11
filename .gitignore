@@ -1,0 +1,7 @@
+*.pyc
+*.save
+*.log
+bin/
+include/
+lib/
+lib64/
