@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from random import choice
 from subprocess import run
-import traceback
 from phue import Bridge
 from pipewire_python.controller import Controller
 import logging
