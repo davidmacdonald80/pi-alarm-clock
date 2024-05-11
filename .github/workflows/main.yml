@@ -1,4 +1,4 @@
-name: Python CI with Docker
+name: Python CI
 
 on:
   push:
@@ -10,41 +10,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    container:
-      image: ubuntu:20.04
-      options: --privileged
-
     steps:
-    - name: Checkout Code
+    - name: Checkout code
       uses: actions/checkout@v4.1.4
 
-    - name: Install System Dependencies
-      run: |
-        apt-get update
-        apt-get install -y python3-pip python3-dev libsystemd-dev python3-venv pkg-config
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
 
-    - name: Set up Python Environment
+    - name: Install system dependencies
       run: |
-        python3 -m venv /venv
-      shell: bash
+        export DEBIAN_FRONTEND=noninteractive
+        echo "tzdata tzdata/Areas select Europe" | sudo debconf-set-selections
+        echo "tzdata tzdata/Zones/Europe select Berlin" | sudo debconf-set-selections
+        sudo apt-get update
+        sudo apt-get install -y python3-venv libsystemd-dev pkg-config
+        # You can add other necessary packages here
 
-    - name: Activate virtual environment and Install Python Dependencies
+    - name: Install Python dependencies
       run: |
-        source /venv/bin/activate
-        pip install --upgrade pip
+        python -m pip install --upgrade pip
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      shell: bash
 
     - name: Lint with flake8
       run: |
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      shell: bash
 
     - name: Test with pytest
       run: |
         pytest
-      shell: bash
-
-
