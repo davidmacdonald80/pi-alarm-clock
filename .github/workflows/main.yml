@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: [3.9, 3.10, 3.11, 3.12]
 
     steps:
     - name: Checkout Code
@@ -26,9 +26,8 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install specific packages that do not include system dependencies
         pip install flake8 pytest phue pipewire_python
-        # If requirements.txt includes systemd-python, consider modifying it or conditionally installing
+        # Make sure systemd-python is not attempted to be installed
         if [ -f requirements.txt ]; then
           grep -v 'systemd-python' requirements.txt > filtered_requirements.txt
           pip install -r filtered_requirements.txt
@@ -36,9 +35,7 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Test with pytest
