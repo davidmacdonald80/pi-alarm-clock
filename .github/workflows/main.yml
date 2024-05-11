@@ -21,27 +21,29 @@ jobs:
     - name: Install System Dependencies
       run: |
         apt-get update
-        apt-get install -y python3-pip python3-dev libsystemd-dev
+        apt-get install -y python3-pip python3-dev libsystemd-dev python3-venv
 
-    - name: Set up Python
+    - name: Set up Python Environment
       run: |
-        apt-get install -y python3-venv
         python3 -m venv /venv
-        echo "source /venv/bin/activate" >> $GITHUB_ENV
+      shell: bash
 
-    - name: Install Dependencies
+    - name: Activate virtual environment and Install Python Dependencies
       run: |
+        source /venv/bin/activate
         pip install --upgrade pip
         pip install flake8 pytest
-        if [ -f requirements.txt ]; then
-          pip install -r requirements.txt
-        fi
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      shell: bash
 
     - name: Lint with flake8
       run: |
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      shell: bash
 
     - name: Test with pytest
       run: |
         pytest
+      shell: bash
+
