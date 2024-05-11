@@ -21,7 +21,7 @@ jobs:
     - name: Install System Dependencies
       run: |
         apt-get update
-        apt-get install -y python3-pip python3-dev libsystemd-dev python3-venv
+        apt-get install -y python3-pip python3-dev libsystemd-dev python3-venv pkg-config
 
     - name: Set up Python Environment
       run: |
@@ -46,4 +46,5 @@ jobs:
       run: |
         pytest
       shell: bash
+
 
