@@ -73,6 +73,15 @@ def set_lights(on=True):
                        exception=e)
 
 
+def check_volume_input(volume):
+    """
+    Verify volume given is within constraints
+    """
+    if 0 <= volume <= 100:
+        return True
+    else:
+        return False
+
 def set_volume_for_all_sinks(volume_level):
     """Set the volume level for all PulseAudio sinks.
 
@@ -91,11 +100,14 @@ def set_volume_for_all_sinks(volume_level):
         sinks = result.stdout.splitlines()
         for sink in sinks:
             sink_name = sink.split('\t')[1]
-            volume_command = ['pactl',
-                              'set-sink-volume',
-                              sink_name,
-                              f'{volume_level}%']
-            result = run(volume_command, capture_output=True, text=True)
+            if(check_volume_input(volume_level)):
+                volume_command = ['pactl',
+                                'set-sink-volume',
+                                sink_name,
+                                f'{volume_level}%']
+                result = run(volume_command, capture_output=True, text=True)
+            else:
+                return False
             if result.returncode != 0:
                 log_to_journal(f"Failed to set volume for {sink_name}:"\
                                f" {result.stderr}", level='error')
