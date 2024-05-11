@@ -5,19 +5,39 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from random import choice
+from subprocess import run
+import traceback
+from phue import Bridge
 from pipewire_python.controller import Controller
 import logging
 from zoneinfo import ZoneInfo  # For timezone handling including DST
-from subprocess import run
 
 # Setup basic logging
 logging.basicConfig(filename='/home/david/alarm/alarm.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # General adjustable settings
-ALARM_TIME = "13:21"  # Daily alarm time to use
+ALARM_TIME = "6:05"  # Daily alarm time to use
 VOLUME_LEVEL = 75  # volume level to set for both pactl sinks and pipewire_python player (0 - 100)
 MP3_PATH = '/media/audio/got-in-2023/'  # Path to your audio library
 TIMEZONE = ZoneInfo("America/Chicago")  # Local timezone
+LIGHTS_BRIDGE_IP = '192.168.2.241'
+BEDROOM_LIGHTS = ['Lamp', 'FarWall', 'NearWall']
+LIGHT_COMMAND = {'transitiontime': 3000, 'on': True, 'bri': 254}
+
+# Initialize Bridge for lights
+try:
+    bridge = Bridge(LIGHTS_BRIDGE_IP)
+    # bridge.connect() # Uncomment if first-time setup is needed
+except Exception as e:
+    logging.error('Error connecting to Hue Bridge: ', exc_info=True)
+
+def set_lights(on=True):
+    try:
+        command = LIGHT_COMMAND if on else {'on': False}
+        bridge.set_light(BEDROOM_LIGHTS, command)
+        logging.info(f"Lights {'on' if on else 'off'} at {datetime.now(TIMEZONE)}")
+    except Exception as e:
+        logging.error("Failed to control lights: ", exc_info=True)
 
 def set_volume_for_all_sinks(volume_level):
     try:
@@ -74,7 +94,9 @@ def main(mp3_path):
         logging.info(f"Next alarm time set for {next_alarm}, will play until {end_time}")
         time_to_wait = (next_alarm - datetime.now(TIMEZONE)).total_seconds()
         time.sleep(max(time_to_wait, 0))  # Sleep until the alarm time
+        set_lights(True)
         play_songs_until_end_time(end_time, songs, VOLUME_LEVEL)  # Pass the volume level
+        set_lights(False)
 
 if __name__ == "__main__":
     main(MP3_PATH)

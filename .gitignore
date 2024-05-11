@@ -9,3 +9,5 @@ lib/
 lib64/
 share/
 pyvenv.cfg
+lights.py
+lightsStart.bash
