@@ -57,15 +57,7 @@ def test_set_lights_off_success(mock_bridge, mock_log_to_journal):
 
 def test_set_lights_failure(mock_bridge, mock_log_to_journal):
     mock_bridge.set_light.side_effect = Exception("Connection error0")
-    # expected_exception = Exception("Connection error")
-    # mock_bridge.set_light.side_effect = expected_exception
     set_lights(mock_bridge, True)  # Attempt to turn lights on
-
-    # Ensure that log_to_journal is called with the correct parameters
-    # mock_log_to_journal.assert_called_once()
     mock_log_to_journal.assert_called_with("Failed to control lights.", level='error', exception=Mock())
-    # called_args, called_kwargs = mock_log_to_journal.call_args
-    # assert called_args[0].startswith("Failed to control lights.")
-    # assert called_kwargs['level'] == 'error'
-    # assert called_kwargs['exception'] == expected_exception, "The exception should be the one raised by set_light"
+
 

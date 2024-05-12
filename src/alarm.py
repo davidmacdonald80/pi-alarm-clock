@@ -47,14 +47,14 @@ def log_to_journal(message, level='info', exception=None):
 
 
 try:
-    bridge = Bridge(LIGHTS_BRIDGE_IP)
+    BRIDGE = Bridge(LIGHTS_BRIDGE_IP)
     # bridge.connect()  # Uncomment if first-time setup is needed.
 except Exception as e:
     log_to_journal('Error connecting to Hue Bridge.',
                    level='error',
                    exception=e)
 
-def set_lights(on=True):
+def set_lights(bridge, on=True):
     """
     Toggle the state of bedroom lights via the Hue Bridge.
 
@@ -198,9 +198,9 @@ def main(mp3_path):
                        f" will play until {end_time}", level='info')
         time_to_wait = (next_alarm - datetime.now(TIMEZONE)).total_seconds()
         time.sleep(max(time_to_wait, 0))  # Sleep until the alarm time.
-        set_lights(True)
+        set_lights(BRIDGE, True)
         play_songs_until_end_time(end_time, songs, VOLUME_LEVEL)
-        set_lights(False)
+        set_lights(BRIDGE, False)
 
 
 if __name__ == "__main__":
