@@ -12,8 +12,9 @@ from zoneinfo import ZoneInfo  # For time zones, including DST.
 from systemd import journal
 
 # Configuration constants.
-ALARM_TIME = "16:03" # Alarm time
-VOLUME_LEVEL = 65 # Volume level for sinks and player (0-100)
+ALARM_TIME = "6:05" # Alarm time
+ONLY_WEEKDAYS = True
+VOLUME_LEVEL = 70 # Volume level for sinks and player (0-100)
 MP3_PATH = '/media/audio/got-in-2023/' # Audio library path
 TIMEZONE = ZoneInfo("America/Chicago") # Location's time zone
 LIGHTS_BRIDGE_IP = '192.168.2.241' # Hue Bridge IP address
@@ -21,67 +22,92 @@ BEDROOM_LIGHTS = ['Lamp', 'FarWall', 'NearWall'] # Light group
 LIGHT_COMMAND = {'transitiontime': 3000, 'on': True, 'bri': 254} 
 
 
-def log_to_journal(message, level='info', exception=None):
-    """
-    Log messages to systemd's journal with optional exception details.
-
-    Args:
-        message (str): The message to log.
-        level (str): The log level ('info', 'error', etc.).
-        exception (Exception, optional): 
-            The exception object to log, if any.
-    """
-    if exception:
-        # Append exception message to the log.
-        message += f" Exception: {str(exception)}"
-
-    priority_level = {
-        'emerg': journal.LOG_EMERG,
-        'crit': journal.LOG_CRIT,
-        'error': journal.LOG_ERR,
-        'warning': journal.LOG_WARNING,
-        'info': journal.LOG_INFO,
-        'debug': journal.LOG_DEBUG
-    }.get(level, journal.LOG_INFO)
-    journal.send(message, PRIORITY=priority_level)
+class AlarmClock:
+    def __init__(self):
+        self.alarm_time = "6:05"
+        self.only_weekdays = True
+        self.volume_level = 70
+        self.mp3_path = '/media/audio/got-in-2023'
+        self.timezone = ZoneInfo("America/Chicago")
+        self.lights_bridge_ip = '192.168.2.241'
+        self.bedroom_lights = ['Lamp', 'FarWall', 'NearWall']
+        self.light_command = {'transition': 3000, 'on': True, 'bri': 254}
+        self.bridge = None
+        self.initialize_bridge()
 
 
-try:
-    BRIDGE = Bridge(LIGHTS_BRIDGE_IP)
-    # bridge.connect()  # Uncomment if first-time setup is needed.
-except Exception as e:
-    log_to_journal('Error connecting to Hue Bridge.',
-                   level='error',
-                   exception=e)
+    def log_to_journal(self, message, level='info', exception=None):
+        """
+        Log messages to systemd's journal with optional exception details.
+
+        Args:
+            message (str): The message to log.
+            level (str): The log level ('info', 'error', etc.).
+            exception (Exception, optional): 
+                The exception object to log, if any.
+        """
+        if exception:
+            # Append exception message to the log.
+            message += f" Exception: {str(exception)}"
+
+        priority_level = {
+            'emerg': journal.LOG_EMERG,
+            'crit': journal.LOG_CRIT,
+            'error': journal.LOG_ERR,
+            'warning': journal.LOG_WARNING,
+            'info': journal.LOG_INFO,
+            'debug': journal.LOG_DEBUG
+        }.get(level, journal.LOG_INFO)
+        journal.send(message, PRIORITY=priority_level)
+    
+    def initialze_bridge(self):
+        """Initialize the Hue Bridge connection."""
+        try:
+            self.bridge = Bridge(self.lights_bridge_ip)
+        except Exception as e:
+            self.log_to_journal('Error connecting to Hue Bridge', level='error', exception=e)
+
+    def next_weekday(self, start_date):
+        """ Return the next weekday date from the given start date."""
+        if is_weekday(start_date) < 5:
+            return start_date
+        # Find next weekday
+        days_ahead = 1
+        # while not is_weekday(start_date + timedelta(days=days_ahead)):
+        while start_date.next_weekday() + days_ahead % 7 >= 5:
+            days_ahead += 1
+        return start_date + timedelta(days=days_ahead)
+    
+    def get_next_alarm_time(self):
+        """
+        Calculate the next weekday alarm time
+        considering the current time and timezone.
+        """
+        alarm_time = datetime.strptime(self.alarm_time, "%H:%M").time()
+        now = datetime.now(self.timezone)
+        next_alarm = datetime(now.year, now.month, now.day, alarm_time.hour,
+                            alarm_time.minute, tzinfo=self.timezone)
+        if now >= next_alarm:
+            next_alarm += timedelta(days=1)
+        
+        if self.only_weekdays:
+            next_alarm = self.next_weekday(next_alarm)
+
+        return next_alarm
+
+# try:
+#     BRIDGE = Bridge(LIGHTS_BRIDGE_IP)
+#     # bridge.connect()  # Uncomment if first-time setup is needed.
+# except Exception as e:
+#     log_to_journal('Error connecting to Hue Bridge.',
+#                    level='error',
+#                    exception=e)
 
 def is_weekday(date):
     """ Check if the given date is a weekday."""
     return date.weekday() < 5 # Monday to Friday oare < 5
 
 
-def next_weekday(start_date):
-    """ Return the next weekday date from the given start date."""
-    days_ahead = 0 if is_weekday(
-        start_date) else (7 - start_date.weekday() + 7) % 7 -2
-    if days_ahead == 0:
-        return start_date
-    return start_date + timedelta(days=days_ahead)
-
-
-def get_next_alarm_time(timezone, alarm_time_str):
-    """
-    Calculate the next weekday alarm time
-    considering the current time and timezone.
-    """
-    alarm_time = datetime.strptime(alarm_time_str, "%H:%M").time()
-    now = datetime.now(timezone)
-    next_alarm = datetime(now.year, now.month, now.day, alarm_time.hour,
-                          alarm_time.minute, tzinfo=timezone)
-    if now >= next_alarm:
-        next_alarm += timedelta(days=1)
-    # Ensure the next alarm is on a weekday
-    next_alarm = next_weekday(next_alarm)
-    return next_alarm
 
 
 def set_lights(bridge, light_group, light_command, timezone, on=True):
