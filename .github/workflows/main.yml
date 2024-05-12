@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4.1.4
@@ -22,8 +26,8 @@ jobs:
     - name: Install system dependencies
       run: |
         export DEBIAN_FRONTEND=noninteractive
-        echo "tzdata tzdata/Areas select Europe" | sudo debconf-set-selections
-        echo "tzdata tzdata/Zones/Europe select Berlin" | sudo debconf-set-selections
+        echo "tzdata tzdata/Areas select America" | sudo debconf-set-selections
+        echo "tzdata tzdata/Zones/America select Chicago" | sudo debconf-set-selections
         sudo apt-get update
         sudo apt-get install -y python3-venv libsystemd-dev pkg-config
         # You can add other necessary packages here
