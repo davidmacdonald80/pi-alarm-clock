@@ -24,16 +24,24 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libsystemd-dev
 
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install pytest
         pip install -r requirements.txt
 
-    - name: Run pytest
-      env:
-        PYTHONPATH: ${{ github.workspace }}/src
+    - name: Add src to PYTHONPATH
+      run: echo "PYTHONPATH=\$PYTHONPATH:${{ github.workspace }}/src" >> $GITHUB_ENV
+
+    - name: List directories and files
+      run: ls -R
+
+    - name: Run tests with pytest
       run: |
         pytest tests/
+
+    - name: Print successful test execution
+      run: echo "The tests ran successfully!"
 
     - name: Print something
       run: echo "The tests ran successfully!"
