@@ -48,23 +48,23 @@ def mock_log_to_journal():
     with patch('src.alarm.log_to_journal') as mock:
         yield mock
 
-def test_set_lights_on_success(mock_bridge, mock_log_to_journal):
+def test_set_lights_on_success(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
     # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
-    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, TEST_TIMEZONE, True)  # Test setting lights on
-    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, TEST_TIMEZONE, True)
+    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)  # Test setting lights on
+    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)
     # mock_log_to_journal.assert_called_with("Lights on at ...", level='info')
     mock_log_to_journal.assert_called_with(ANY, level='info')
 
-def test_set_lights_off_success(mock_bridge, mock_log_to_journal):
+def test_set_lights_off_success(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
     # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
-    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, TEST_TIMEZONE, False)  # Test setting lights off
-    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, {'on': False}, TEST_TIMEZONE, False)
+    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, False)  # Test setting lights off
+    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, {'on': False}, timezone, False)
     mock_log_to_journal.assert_called_with(ANY, level='info')
 
-def test_set_lights_failure(mock_bridge, mock_log_to_journal):
+def test_set_lights_failure(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
     expected_exception = Exception("Connection error0")
     mock_bridge.set_light.side_effect = expected_exception
-    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, TEST_TIMEZONE, True)  # Attempt to turn lights on
+    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)  # Attempt to turn lights on
     mock_log_to_journal.assert_called_with(ANY, level='error', exception=expected_exception)
 
 
