@@ -54,6 +54,36 @@ except Exception as e:
                    level='error',
                    exception=e)
 
+def is_weekday(date):
+    """ Check if the given date is a weekday."""
+    return date.weekday() < 5 # Monday to Friday oare < 5
+
+
+def next_weekday(start_date):
+    """ Return the next weekday date from the given start date."""
+    days_ahead = 0 if is_weekday(
+        start_date) else (7 - start_date.weekday() + 7) % 7 -2
+    if days_ahead == 0:
+        return start_date
+    return start_date + timedelta(days=days_ahead)
+
+
+def get_next_alarm_time(timezone, alarm_time_str):
+    """
+    Calculate the next weekday alarm time
+    considering the current time and timezone.
+    """
+    alarm_time = datetime.strptime(alarm_time_str, "%H:%M").time()
+    now = datetime.now(timezone)
+    next_alarm = datetime(now.year, now.month, now.day, alarm_time.hour,
+                          alarm_time.minute, tzinfo=timezone)
+    if now >= next_alarm:
+        next_alarm += timedelta(days=1)
+    # Ensure the next alarm is on a weekday
+    next_alarm = next_weekday(next_alarm)
+    return next_alarm
+
+
 def set_lights(bridge, light_group, light_command, timezone, on=True):
     """
     Toggle the state of bedroom lights via the Hue Bridge.
@@ -85,6 +115,7 @@ def check_volume_input(volume):
         return True
     else:
         return False
+
 
 def set_volume_for_all_sinks(volume_level):
     """Set the volume level for all PulseAudio sinks.
