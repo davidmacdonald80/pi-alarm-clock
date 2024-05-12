@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo  # For time zones, including DST.
 from systemd import journal
 
 # Configuration constants.
-ALARM_TIME = "6:05" # Alarm time
+ALARM_TIME = "16:03" # Alarm time
 VOLUME_LEVEL = 65 # Volume level for sinks and player (0-100)
 MP3_PATH = '/media/audio/got-in-2023/' # Audio library path
 TIMEZONE = ZoneInfo("America/Chicago") # Location's time zone
@@ -200,7 +200,8 @@ def main(mp3_path, light_group, bridge, timezone,
         try:
             next_alarm = get_next_alarm_time(timezone=timezone,
                                             alarm_time=alarm_time)
-            end_time = next_alarm + timedelta(hours=2)  # Play for 2 hours.
+            # end_time = next_alarm + timedelta(hours=2)  # Play for 2 hours.
+            end_time = next_alarm + timedelta(minutes=1)
             log_to_journal(f"Next alarm time set for {next_alarm},"\
                         f" will play until {end_time}", level='info')
             time_to_wait = (
