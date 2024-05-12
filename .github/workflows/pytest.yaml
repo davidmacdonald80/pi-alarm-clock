@@ -13,6 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -28,12 +29,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Set PYTHONPATH
+    - name: Run pytest
       env:
         PYTHONPATH: ${{ github.workspace }}/src
-
-    - name: Run pytest
-      run: pytest
+      run: |
+        pytest tests/
 
     - name: Print something
       run: echo "The tests ran successfully!"
+
