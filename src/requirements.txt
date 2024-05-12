@@ -1,0 +1,3 @@
+phue==1.1
+pipewire_python==0.2.3
+systemd_python==235

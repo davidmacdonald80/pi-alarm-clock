@@ -1,5 +1,9 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+
 import pytest
-from src.alarm import set_volume_for_all_sinks
+from alarm import set_volume_for_all_sinks
 
 def test_set_volume_for_all_sinks():
     # Assume that function returns True if successful, False otherwise
