@@ -51,14 +51,14 @@ def mock_log_to_journal():
 def test_set_lights_on_success(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
     # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
     set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)  # Test setting lights on
-    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)
+    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, TEST_LIGHT_COMMAND)
     # mock_log_to_journal.assert_called_with("Lights on at ...", level='info')
     mock_log_to_journal.assert_called_with(ANY, level='info')
 
 def test_set_lights_off_success(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
     # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
     set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, False)  # Test setting lights off
-    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, {'on': False}, timezone, False)
+    mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, {'on': False})
     mock_log_to_journal.assert_called_with(ANY, level='info')
 
 def test_set_lights_failure(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
@@ -66,5 +66,4 @@ def test_set_lights_failure(mock_bridge, mock_log_to_journal, timezone=TEST_TIME
     mock_bridge.set_light.side_effect = expected_exception
     set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)  # Attempt to turn lights on
     mock_log_to_journal.assert_called_with(ANY, level='error', exception=expected_exception)
-
 
