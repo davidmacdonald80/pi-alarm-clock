@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from your_module import set_volume_for_all_sinks
+from src.alarm import set_volume_for_all_sinks
 
 @pytest.fixture
 def mock_subprocess_run():
