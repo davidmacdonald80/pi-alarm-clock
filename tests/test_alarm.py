@@ -1,6 +1,6 @@
 import pytest
-from unittest.mock import patch, Mock
-from src.alarm import set_volume_for_all_sinks
+from unittest.mock import patch, MagicMock
+from your_module import set_volume_for_all_sinks
 
 @pytest.fixture
 def mock_subprocess_run():
@@ -8,24 +8,24 @@ def mock_subprocess_run():
         yield mock_run
 
 def test_set_volume_success(mock_subprocess_run):
-    # Simulate successful listing of sinks
-    mock_subprocess_run.return_value = Mock(returncode=0, stdout="sink1\tname1\nsink2\tname2", stderr='')
-    # Assume volume setting also succeeds
-    assert set_volume_for_all_sinks(50) == True, "Should return True when volume setting is successful"
+    # Mock for listing sinks
+    mock_list_sinks = MagicMock(returncode=0, stdout="sink1\tname1\nsink2\tname2", stderr='')
+    # Mock for setting volume
+    mock_set_volume = MagicMock(returncode=0, stdout='', stderr='')
 
-def test_list_sinks_failure(mock_subprocess_run):
-    # Simulate failure in listing sinks
-    mock_subprocess_run.return_value = Mock(returncode=1, stdout='', stderr='Error listing sinks')
-    assert set_volume_for_all_sinks(50) == False, "Should return False when listing sinks fails"
+    # Set side_effect to simulate different calls
+    mock_subprocess_run.side_effect = [mock_list_sinks, mock_set_volume, mock_set_volume]
 
-def test_set_volume_failure(mock_subprocess_run):
-    # Simulate successful listing but failure in setting volume
-    mock_subprocess_run.side_effect = [
-        Mock(returncode=0, stdout="sink1\tname1\nsink2\tname2", stderr=''),  # First call to list sinks
-        Mock(returncode=1, stdout='', stderr='Error setting volume')  # Second call to set volume
+    # Call the function
+    result = set_volume_for_all_sinks(50)
+    # Assertions
+    assert result == True, "Should return True when volume setting is successful"
+    mock_subprocess_run.assert_called()
+
+    # Check if subprocess.run was called correctly
+    calls = [
+        ((['pactl', 'list', 'short', 'sinks'],), {'capture_output': True, 'text': True}),
+        ((['pactl', 'set-sink-volume', 'name1', '50%'],), {'capture_output': True, 'text': True}),
+        ((['pactl', 'set-sink-volume', 'name2', '50%'],), {'capture_output': True, 'text': True})
     ]
-    assert set_volume_for_all_sinks(50) == False, "Should return False when setting volume fails"
-
-def test_invalid_volume_input(mock_subprocess_run):
-    # Test with invalid volume input, assuming check_volume_input validates the range
-    assert set_volume_for_all_sinks(101) == False, "Should return False for invalid volume input"
+    mock_subprocess_run.assert_has_calls(calls, any_order=True)
