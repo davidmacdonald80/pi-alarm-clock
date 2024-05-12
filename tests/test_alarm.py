@@ -1,6 +1,6 @@
 import pytest
 from phue import Bridge
-from unittest.mock import patch, MagicMock, Mock, call
+from unittest.mock import patch, MagicMock, Mock, call, ANY
 from src.alarm import set_volume_for_all_sinks, set_lights, log_to_journal
 
 @pytest.fixture
@@ -48,6 +48,7 @@ def test_set_lights_on_success(mock_bridge, mock_log_to_journal):
     set_lights(mock_bridge, True)  # Test setting lights on
     mock_bridge.set_light.assert_called_once_with(['Lamp', 'FarWall', 'NearWall'], {'transitiontime': 3000, 'on': True, 'bri': 254})
     mock_log_to_journal.assert_called_with("Lights on at ...", level='info')
+    mock_log_to_journal.assert_has_calls([call(ANY, level='info')])
 
 def test_set_lights_off_success(mock_bridge, mock_log_to_journal):
     # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
@@ -56,8 +57,9 @@ def test_set_lights_off_success(mock_bridge, mock_log_to_journal):
     mock_log_to_journal.assert_called_with("Lights off at ...", level='info')
 
 def test_set_lights_failure(mock_bridge, mock_log_to_journal):
-    mock_bridge.set_light.side_effect = Exception("Connection error0")
+    expected_exception = Exception("Connection error0")
+    mock_bridge.set_light.side_effect = expected_exception
     set_lights(mock_bridge, True)  # Attempt to turn lights on
-    mock_log_to_journal.assert_called_with("Failed to control lights.", level='error', exception=Mock())
+    mock_log_to_journal.assert_called_with("Failed to control lights.", level='error', exception=expected_exception)
 
 
