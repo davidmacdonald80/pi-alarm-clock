@@ -13,7 +13,7 @@ from systemd import journal
 
 # Configuration constants.
 ALARM_TIME = "6:05" # Alarm time
-VOLUME_LEVEL = 75 # Volume level for sinks and player (0-100)
+VOLUME_LEVEL = 65 # Volume level for sinks and player (0-100)
 MP3_PATH = '/media/audio/got-in-2023/' # Audio library path
 TIMEZONE = ZoneInfo("America/Chicago") # Location's time zone
 LIGHTS_BRIDGE_IP = '192.168.2.241' # Hue Bridge IP address
@@ -54,18 +54,22 @@ except Exception as e:
                    level='error',
                    exception=e)
 
-def set_lights(bridge, on=True):
+def set_lights(bridge, light_group, light_command, timezone, on=True):
     """
     Toggle the state of bedroom lights via the Hue Bridge.
 
     Args:
         on (bool): True to turn lights on, False to turn them off.
     """
-    command = LIGHT_COMMAND if on else {'on': False}
+    if on:
+        command = light_command
+    else:
+        command = {'on': False}
+
     try:
-        bridge.set_light(BEDROOM_LIGHTS, command)
+        bridge.set_light(light_group, command)
         log_to_journal(f"Lights {'on' if on else 'off'}"\
-                       "at {datetime.now(TIMEZONE)}",
+                       f"at {datetime.now(timezone)}",
                        level='info')
     except Exception as e:
         log_to_journal("Failed to control lights.",
@@ -120,21 +124,21 @@ def set_volume_for_all_sinks(volume_level):
         return False
 
 
-def get_next_alarm_time():
+def get_next_alarm_time(timezone, alarm_time):
     """Calculate the next scheduled alarm time.
 
     Returns:
         datetime: The next alarm time 
             considering the current time and time zone.
     """
-    now = datetime.now(TIMEZONE)
-    alarm_time = datetime.strptime(ALARM_TIME, "%H:%M").time()
+    now = datetime.now(timezone)
+    alarm_time = datetime.strptime(alarm_time, "%H:%M").time()
     next_alarm = datetime(now.year,
                           now.month,
                           now.day,
                           alarm_time.hour,
                           alarm_time.minute,
-                          tzinfo=TIMEZONE)
+                          tzinfo=timezone)
     if now >= next_alarm:
         next_alarm += timedelta(days=1)
     return next_alarm
@@ -166,7 +170,7 @@ def play_song(file_path, volume_level):
                        exception=e)
 
 
-def play_songs_until_end_time(end_time, songs, volume_level):
+def play_songs_until_end_time(end_time, songs, volume_level, timezone):
     """Play songs until a specified end time is reached.
 
     Args:
@@ -174,14 +178,15 @@ def play_songs_until_end_time(end_time, songs, volume_level):
         songs (list of str): List of song paths.
         volume_level (int): Volume level (0-100).
     """
-    while datetime.now(TIMEZONE) < end_time:
+    while datetime.now(timezone) < end_time:
         random_song = choice(songs)
         log_to_journal(f"Playing song: {random_song}", level='info')
         play_song(random_song, volume_level)
         time.sleep(10)  # Delay between songs.
 
 
-def main(mp3_path):
+def main(mp3_path, light_group, bridge, timezone,
+         volume_level, alarm_time, light_command):
     """Main function to handle alarm scheduling and song playing.
 
     Args:
@@ -192,16 +197,25 @@ def main(mp3_path):
     songs = [str(song) for song in Path(mp3_path).rglob('*.mp3')
             if not song.parent.match('@eaDir')]
     while True:
-        next_alarm = get_next_alarm_time()
-        end_time = next_alarm + timedelta(hours=2)  # Play for 2 hours.
-        log_to_journal(f"Next alarm time set for {next_alarm},"\
-                       f" will play until {end_time}", level='info')
-        time_to_wait = (next_alarm - datetime.now(TIMEZONE)).total_seconds()
-        time.sleep(max(time_to_wait, 0))  # Sleep until the alarm time.
-        set_lights(BRIDGE, True)
-        play_songs_until_end_time(end_time, songs, VOLUME_LEVEL)
-        set_lights(BRIDGE, False)
+        try:
+            next_alarm = get_next_alarm_time(timezone=timezone,
+                                            alarm_time=alarm_time)
+            end_time = next_alarm + timedelta(hours=2)  # Play for 2 hours.
+            log_to_journal(f"Next alarm time set for {next_alarm},"\
+                        f" will play until {end_time}", level='info')
+            time_to_wait = (
+                next_alarm - datetime.now(timezone)).total_seconds()
+            time.sleep(max(time_to_wait, 0))  # Sleep until the alarm time.
+            set_lights(bridge, light_group, light_command, timezone, True)
+            play_songs_until_end_time(end_time, songs, volume_level, timezone)
+            set_lights(bridge, light_group, light_command, timezone, False)
+        except Exception as e:
+            log_to_journal("An error occured in main loop.",
+                           level='error', exception=e)
+            set_lights(bridge, light_group, light_command, timezone, False) 
 
 
 if __name__ == "__main__":
-    main(MP3_PATH)
+    main(mp3_path=MP3_PATH, light_group=BEDROOM_LIGHTS, bridge=BRIDGE,
+         timezone=TIMEZONE, volume_level=VOLUME_LEVEL, alarm_time=ALARM_TIME,
+         light_command=LIGHT_COMMAND)
