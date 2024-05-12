@@ -31,16 +31,9 @@ jobs:
         pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Add src to PYTHONPATH
+    - name: Run pytest with modified PYTHONPATH
       run: |
-        echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
-        echo "PYTHONPATH=$GITHUB_ENV"  # Debug output to verify PYTHONPATH
-
-    - name: List directory structure
-      run: ls -alhR  # Lists all files and directories recursively for debugging
-
-    - name: Run pytest
-      run: python -m pytest tests/
+        PYTHONPATH=$(pwd)/src pytest -vv
 
     - name: Print successful test execution
-      run: echo "The tests ran successfully!"
+      run: echo "Tests completed successfully!"
