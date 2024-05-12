@@ -30,19 +30,11 @@ jobs:
         pip install pytest
         pip install -r requirements.txt
 
-    - name: Add src to PYTHONPATH
-      run: echo "PYTHONPATH=\$PYTHONPATH:${{ github.workspace }}/src" >> $GITHUB_ENV
-
-    - name: List directories and files
-      run: ls -R
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=\$PYTHONPATH:${{ github.workspace }}" >> $GITHUB_ENV
 
     - name: Run tests with pytest
-      run: |
-        pytest tests/
+      run: python -m pytest tests/
 
     - name: Print successful test execution
       run: echo "The tests ran successfully!"
-
-    - name: Print something
-      run: echo "The tests ran successfully!"
-
