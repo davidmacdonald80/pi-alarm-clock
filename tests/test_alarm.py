@@ -1,5 +1,5 @@
 import pytest
-from alarm import set_volume_for_all_sinks
+from src.alarm import set_volume_for_all_sinks
 
 def test_set_volume_for_all_sinks():
     # Assume that function returns True if successful, False otherwise
