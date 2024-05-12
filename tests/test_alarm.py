@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock, call
 from src.alarm import set_volume_for_all_sinks, set_lights, log_to_journal
 
 @pytest.fixture
@@ -54,7 +54,14 @@ def test_set_lights_off_success(mock_bridge, mock_log_to_journal):
     mock_log_to_journal.assert_called_with("Lights off at ...", level='info')
 
 def test_set_lights_failure(mock_bridge, mock_log_to_journal):
-    mock_bridge.set_light.side_effect = Exception("Connection error")
+    expected_exception = Exception("Connection error")
+    mock_bridge.set_light.side_effect = expected_exception
     set_lights(True)  # Attempt to turn lights on
-    mock_log_to_journal.assert_called_with("Failed to control lights.", level='error', exception=Mock())
+
+    # Ensure that log_to_journal is called with the correct parameters
+    mock_log_to_journal.assert_called_once()
+    called_args, called_kwargs = mock_log_to_journal.call_args
+    assert called_args[0].startswith("Failed to control lights.")
+    assert called_kwargs['level'] == 'error'
+    assert called_kwargs['exception'] == expected_exception, "The exception should be the one raised by set_light"
 
