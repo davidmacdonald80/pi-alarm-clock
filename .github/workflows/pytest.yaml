@@ -32,7 +32,12 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: Add src to PYTHONPATH
-      run: echo "PYTHONPATH=\$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
+      run: |
+        echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
+        echo "PYTHONPATH=$GITHUB_ENV"  # Debug output to verify PYTHONPATH
+
+    - name: List directory structure
+      run: ls -alhR  # Lists all files and directories recursively for debugging
 
     - name: Run pytest
       run: python -m pytest tests/
