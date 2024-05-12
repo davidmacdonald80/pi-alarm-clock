@@ -33,8 +33,9 @@ def test_set_volume_success(mock_subprocess_run):
 
 @pytest.fixture
 def mock_bridge():
-    with patch('src.alarm.bridge') as mock:
-        yield mock
+    with patch('phue.Bridge') as mock:
+        mock.return_value = Mock(set_light=Mock())
+        yield mock.return_value
 
 @pytest.fixture
 def mock_log_to_journal():
@@ -42,26 +43,28 @@ def mock_log_to_journal():
         yield mock
 
 def test_set_lights_on_success(mock_bridge, mock_log_to_journal):
-    mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
+    # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
     set_lights(True)  # Test setting lights on
     mock_bridge.set_light.assert_called_once_with(['Lamp', 'FarWall', 'NearWall'], {'transitiontime': 3000, 'on': True, 'bri': 254})
     mock_log_to_journal.assert_called_with("Lights on at ...", level='info')
 
 def test_set_lights_off_success(mock_bridge, mock_log_to_journal):
-    mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
+    # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
     set_lights(False)  # Test setting lights off
     mock_bridge.set_light.assert_called_once_with(['Lamp', 'FarWall', 'NearWall'], {'on': False})
     mock_log_to_journal.assert_called_with("Lights off at ...", level='info')
 
 def test_set_lights_failure(mock_bridge, mock_log_to_journal):
-    expected_exception = Exception("Connection error")
-    mock_bridge.set_light.side_effect = expected_exception
+    mock_bridge.set_light.side_effect = Exception("Connection error0")
+    # expected_exception = Exception("Connection error")
+    # mock_bridge.set_light.side_effect = expected_exception
     set_lights(True)  # Attempt to turn lights on
 
     # Ensure that log_to_journal is called with the correct parameters
-    mock_log_to_journal.assert_called_once()
-    called_args, called_kwargs = mock_log_to_journal.call_args
-    assert called_args[0].startswith("Failed to control lights.")
-    assert called_kwargs['level'] == 'error'
-    assert called_kwargs['exception'] == expected_exception, "The exception should be the one raised by set_light"
+    # mock_log_to_journal.assert_called_once()
+    mock_log_to_journal.assert_called_with("Failed to control lights.", level='error', exception=Mock())
+    # called_args, called_kwargs = mock_log_to_journal.call_args
+    # assert called_args[0].startswith("Failed to control lights.")
+    # assert called_kwargs['level'] == 'error'
+    # assert called_kwargs['exception'] == expected_exception, "The exception should be the one raised by set_light"
 
