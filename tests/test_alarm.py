@@ -50,7 +50,7 @@ def mock_log_to_journal():
 def test_set_lights_on_success(mock_bridge, mock_log_to_journal):
     # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
     set_lights(mock_bridge, True)  # Test setting lights on
-    mock_bridge.set_light.assert_called_once_with(['Lamp', 'FarWall', 'NearWall'], TEST_LIGHT_COMMAND, TEST_TIMEZONE True)
+    mock_bridge.set_light.assert_called_once_with(['Lamp', 'FarWall', 'NearWall'], TEST_LIGHT_COMMAND, TEST_TIMEZONE, True)
     # mock_log_to_journal.assert_called_with("Lights on at ...", level='info')
     mock_log_to_journal.assert_called_with(ANY, level='info')
 
