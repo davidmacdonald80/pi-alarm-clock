@@ -1,7 +1,7 @@
 import pytest
 from phue import Bridge
 from unittest.mock import patch, MagicMock, Mock, call, ANY
-from src.alarm import set_volume_for_all_sinks, set_lights, log_to_journal
+from src.alarm import AlarmClock
 from zoneinfo import ZoneInfo
 
 TEST_TIMEZONE = ZoneInfo("America/Chicago")
@@ -13,7 +13,11 @@ def mock_subprocess_run():
     with patch('src.alarm.run') as mock_run:  # Make sure to patch at the correct location
         yield mock_run
 
-def test_set_volume_success(mock_subprocess_run):
+@pytest.fixture
+def alarm_clock():
+    return AlarmClock(alarm_time="6:05", only_weekdays=True, volume_level=50)
+
+def test_set_volume_success(mock_subprocess_run, alarm_clock):
     # Mock for listing sinks with successful return values
     mock_list_sinks = MagicMock(returncode=0, stdout="sink1\tname1\nsink2\tname2", stderr='')
     # Mock for setting volume also succeeds
@@ -23,7 +27,7 @@ def test_set_volume_success(mock_subprocess_run):
     mock_subprocess_run.side_effect = [mock_list_sinks, mock_set_volume, mock_set_volume]
 
     # Execute the function with debug information
-    result = set_volume_for_all_sinks(50)
+    result = alarm_clock.set_volume_for_all_sinks(10)
     print("Mock calls made:", mock_subprocess_run.mock_calls)  # Debug output
 
     # Assertions
@@ -45,25 +49,25 @@ def mock_bridge():
 
 @pytest.fixture
 def mock_log_to_journal():
-    with patch('src.alarm.log_to_journal') as mock:
+    with patch.object(AlarmClock, 'log_to_journal') as mock:
         yield mock
 
-def test_set_lights_on_success(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
-    # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
-    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)  # Test setting lights on
+def test_set_lights_on_success(mock_bridge, mock_log_to_journal, alarm_clock):
+    alarm_clock.bridge = mock_bridge
+    alarm_clock.set_lights(on=True)  # Test setting lights on
     mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, TEST_LIGHT_COMMAND)
-    # mock_log_to_journal.assert_called_with("Lights on at ...", level='info')
     mock_log_to_journal.assert_called_with(ANY, level='info')
 
-def test_set_lights_off_success(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
-    # mock_bridge.set_light.return_value = None  # Assume success doesn't return anything
-    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, False)  # Test setting lights off
+def test_set_lights_off_success(mock_bridge, mock_log_to_journal, alarm_clock):
+    alarm_clock.bridge = mock_bridge
+    alarm_clock.set_lights(on=False)  # Test setting lights off
     mock_bridge.set_light.assert_called_once_with(TEST_LIGHTGROUP, {'on': False})
     mock_log_to_journal.assert_called_with(ANY, level='info')
 
-def test_set_lights_failure(mock_bridge, mock_log_to_journal, timezone=TEST_TIMEZONE):
+def test_set_lights_failure(mock_bridge, mock_log_to_journal, alarm_clock):
+    alarm_clock.bridge = mock_bridge
     expected_exception = Exception("Connection error0")
     mock_bridge.set_light.side_effect = expected_exception
-    set_lights(mock_bridge, TEST_LIGHTGROUP, TEST_LIGHT_COMMAND, timezone, True)  # Attempt to turn lights on
+    alarm_clock.set_lights(on=True)  # Attempt to turn lights on
     mock_log_to_journal.assert_called_with(ANY, level='error', exception=expected_exception)
 
