@@ -21,7 +21,7 @@ class AlarmClock:
         self.timezone = ZoneInfo("America/Chicago")
         self.lights_bridge_ip = '192.168.2.241'
         self.bedroom_lights = ['Lamp', 'FarWall', 'NearWall']
-        self.light_command = {'transition': 3000, 'on': True, 'bri': 254}
+        self.light_command = {'transitiontime': 3000, 'on': True, 'bri': 254}
         self.bridge = self.initialize_bridge()
     
     def initialize_bridge(self):
@@ -29,7 +29,9 @@ class AlarmClock:
         try:
             return Bridge(self.lights_bridge_ip)
         except Exception as e:
-            self.log_to_journal('Error connecting to Hue Bridge', level='error', exception=e)
+            self.log_to_journal('Error connecting to Hue Bridge',
+                                level='error',
+                                exception=e)
             return None
 
     def log_to_journal(self, message, level='info', exception=None):
@@ -131,12 +133,15 @@ class AlarmClock:
                                     'set-sink-volume',
                                     sink_name,
                                     f'{self.volume_level}%']
-                    result = run(volume_command, capture_output=True, text=True)
+                    result = run(volume_command,
+                                 capture_output=True,
+                                 text=True)
                 else:
                     return False
                 if result.returncode != 0:
-                    self.log_to_journal(f"Failed to set volume for {sink_name}:"\
-                                f" {result.stderr}", level='error')
+                    self.log_to_journal(f"Failed to set volume for "\
+                                        f"{sink_name}: {result.stderr}",
+                                        level='error')
                     return False
             return True
         except Exception as e:
@@ -164,7 +169,8 @@ class AlarmClock:
                                         volume=self.volume_level/100,
                                         quality=11)
             audio_controller.playback(audio_filename=file_path)
-            self.log_to_journal(f"Successfully played {file_path}", level='info')
+            self.log_to_journal(f"Successfully played {file_path}",
+                                level='info')
         except Exception as e:
             self.log_to_journal(f"Failed to play {file_path}.",
                         level='error',
