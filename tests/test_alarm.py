@@ -27,7 +27,7 @@ def test_set_volume_success(mock_subprocess_run, alarm_clock):
     mock_subprocess_run.side_effect = [mock_list_sinks, mock_set_volume, mock_set_volume]
 
     # Execute the function with debug information
-    result = alarm_clock.set_volume_for_all_sinks(10)
+    result = alarm_clock.set_volume_for_all_sinks()
     print("Mock calls made:", mock_subprocess_run.mock_calls)  # Debug output
 
     # Assertions
@@ -46,6 +46,11 @@ def mock_bridge():
     with patch('phue.Bridge') as mock:
         mock.return_value = Mock(set_light=Mock())
         yield mock.return_value
+
+@pytest.fixture(autouse=True)
+def mock_initialize_bridge(mock_bridge):
+    with patch.object(AlarmClock, 'initialize_bridge', return_value=mock_bridge):
+        yield
 
 @pytest.fixture
 def mock_log_to_journal():
