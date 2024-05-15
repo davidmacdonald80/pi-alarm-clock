@@ -219,14 +219,17 @@ class AlarmClock:
 
 
 if __name__ == "__main__":
-    ac1 = AlarmClock(alarm_time="6:05", only_weekdays=True, volume_level=70)
-    ac2 = AlarmClock(alarm_time="20:41", only_weekdays=True, volume_level=85)
+    threads = []
+    clocks = []
+    clocks.append(AlarmClock(alarm_time="6:05", only_weekdays=True, volume_level=70))
+    # clocks.append(AlarmClock(alarm_time="23:17", only_weekdays=True, volume_level=85))
 
-    thread1 = Thread(target=ac1.main)
-    thread2 = Thread(target=ac2.main)
+    for clock in clocks:
+        thread = Thread(target=clock.main)
+        threads.append(thread)
 
-    thread1.start()
-    thread2.start()
+    for thread in threads:
+        thread.start()
 
-    thread1.join()
-    thread2.join()
+    for thread in threads:
+        thread.join()
