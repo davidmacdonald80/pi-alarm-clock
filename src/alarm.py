@@ -2,6 +2,8 @@
 # Path to the virtual environment's Python interpreter.
 
 import time
+import json
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from random import choice
@@ -10,22 +12,120 @@ from phue import Bridge
 from pipewire_python.controller import Controller
 from zoneinfo import ZoneInfo  # For time zones, including DST.
 from systemd import journal
-from threading import Thread, Event
+from threading import Thread
+from alarm import AlarmClock
+
+
+def get_user_input(prompt, default=None):
+    """
+    Get input from the user with an optional default value.
+    """
+    if default:
+        prompt = f"{prompt} [{default}]: "
+    else:
+        prompt = f"{prompt}: "
+    user_input = input(prompt)
+    return user_input if user_input else default
 
 class AlarmClock:
-    def __init__(self, alarm_time, only_weekdays, volume_level):
+    SETTINGS_FILE = "~/alarm/alarm_settings.json"
+    def __init__(self, alarm_time, only_weekdays, volume_level,
+                 alarm_duration, mp3_path=None, timezone=None,
+                 lights_bridge_ip=None, bedroom_lights=None,
+                 light_command=None):
+        """
+        Initialize the AlarmClock instance with user-defined settings.
+        Args:
+            alarm_time (str): Time to set the alarm (HH:MM).
+            only_weekdays (bool): Whether the alarm is for weekdays only.
+            volume_level (int): Volume level (0-100).
+            alarm_duration (str): Duration for the alarm.
+            mp3_path (str, optional): Path to MP3 files. Default is None.
+            timezone (str, optional): Timezone. Default is None.
+            lights_bridge_ip (str, optional): IP address of the Hue Bridge. Default is None.
+            bedroom_lights (list, optional): List of bedroom light names. Default is None.
+            light_command (dict, optional): Command for the lights. Default is None.
+        """
         self.alarm_time = alarm_time
         self.only_weekdays = only_weekdays
         self.volume_level = volume_level
-        self.mp3_path = '/media/audio/got-in-2023'
-        self.timezone = ZoneInfo("America/Chicago")
-        self.lights_bridge_ip = '192.168.2.241'
-        self.bedroom_lights = ['Lamp', 'FarWall', 'NearWall']
-        self.light_command = {'transitiontime': 3000, 'on': True, 'bri': 254}
+        self.alarm_duration = alarm_duration
+        self.mp3_path = mp3_path or  '/media/audio/got-in-2023'
+        self.timezone = timezone or ZoneInfo("America/Chicago")
+        self.lights_bridge_ip = lights_bridge_ip or '192.168.2.241'
+        self.bedroom_lights = bedroom_lights or ['Lamp', 'FarWall', 'NearWall']
+        self.light_command = light_command or {
+            'transitiontime': 3000, 'on': True, 'bri': 254}
         self.bridge = self.initialize_bridge()
-    
+
+    def parse_duration(self, duration):
+        """
+        Verify the duration format and convert it to minutes.
+        Args:
+            duration (str): Duration string (e.g., '2 hours', '30 minutes').
+        Returns:
+            int: Duration in minutes.
+        """
+        match = re.match(
+            r'(\d+)\s*(h|H|hour|Hour|hours|Hours|'
+            r'm|M|minute|Minute|minutes|Minutes)',
+            duration
+        )
+        if not match:
+            raise ValueError(
+                "Invalid duration format. Use 'h' for hours, 'm' for minutes, "
+                "'hour', 'Hour', 'hours', 'Hours', 'minute', 'Minute', "
+                "'minutes', or 'Minutes'."
+            )
+        value, unit = match.groups()
+        value = int(value)
+        if unit in ['h', 'H', 'hour', 'Hour', 'hours', 'Hours']:
+            return value * 60  # Convert hours to minutes
+        elif unit in ['m', 'M', 'minute', 'Minute', 'minutes', 'Minutes']:
+            return value  # Minutes are already in minutes
+        else:
+            raise ValueError(
+                "Invalid duration unit. Use 'h' for hours or 'm' for minutes."
+            )
+        
+    def save_settings(self):
+        """
+        Save the alarm settings to a JSON file.
+        """
+        settings = {
+            'alarm_time': self.alarm_time,
+            'only_weekdays': self.only_weekdays,
+            'volume_level': self.volume_level,
+            'alarm_duration': self.alarm_duration,
+            'mp3_path': self.mp3_path,
+            'timezone': str(self.timezone),
+            'lights_bridge_ip': self.lights_bridge_ip,
+            'bedroom_lights': self.bedroom_lights,
+            'light_command': self.light_command
+        }
+        with open(self.SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f, indent=4)
+
+    @classmethod
+    def load_settings(cls):
+        """
+        Load the alarm settings from a JSON file.
+        Returns:
+        dict Loaded settings, or None if the settings file doesn't exist.
+        """
+        if not Path(cls.SETTINGS_FILE).exists():
+            return None
+        with open(cls.SETTINGS_FILE, 'r') as f:
+            settings = json.load(f)
+        settings['timezone'] = ZoneInfo(settings['timezone'])
+        return settings
+
     def initialize_bridge(self):
-        """Initialize the Hue Bridge connection."""
+        """
+        Initialize the connection to the Hue Bridge.
+        Returns:
+            Bridge: Initialized Hue Bridge instance, or None if the connectio fails.
+        """
         try:
             return Bridge(self.lights_bridge_ip)
         except Exception as e:
@@ -57,7 +157,13 @@ class AlarmClock:
         journal.send(message, PRIORITY=priority_level)
 
     def next_weekday(self, start_date):
-        """ Return the next weekday date from the given start date."""
+        """
+        Return the next weekday date from the given start date.
+        Args:
+            start_date (datetime): the start date.
+        Returns:
+            datetime: The next weekday date.
+        """
         while start_date.weekday() >= 5:
             start_date += timedelta(days=1)
         return start_date
@@ -66,6 +172,8 @@ class AlarmClock:
         """
         Calculate the next weekday alarm time
         considering the current time and timezone.
+        Returns:
+            datetime: The next alarm time.
         """
         alarm_time = datetime.strptime(self.alarm_time, "%H:%M").time()
         now = datetime.now(self.timezone)
@@ -103,7 +211,11 @@ class AlarmClock:
 
     def check_volume_input(self, vl):
         """
-        Verify volume given is within constraints
+        Verify volume given is within constraints.
+        Args:
+            vl(int): Volume level.
+        Returns:
+            bool: True if the volume level is within contraints, False otherwise.
         """
         if 0 <= vl <= 100:
             return True
@@ -113,8 +225,8 @@ class AlarmClock:
     def set_volume_for_all_sinks(self):
         """
         Set the volume level for all PulseAudio sinks.
-        Args:
-            volume_level (int): Volume level in percentage (0-100).
+        Returns:
+            bool: True if the volume was set successfully, False otherwise.
         """
         try:
             result = run(['pactl', 'list', 'short', 'sinks'],
@@ -203,7 +315,7 @@ class AlarmClock:
         while True:
             try:
                 next_alarm = self.get_next_alarm_time()
-                end_time = next_alarm + timedelta(hours=2)
+                end_time = next_alarm + timedelta(minutes=self.alarm_duration)
                 self.log_to_journal(f"Next alarm time set for {next_alarm},"\
                             f" will play until {end_time}", level='info')
                 time_to_wait = (
@@ -219,8 +331,14 @@ class AlarmClock:
 
 
 if __name__ == "__main__":
-    ac1 = AlarmClock(alarm_time="6:05", only_weekdays=True, volume_level=70)
-    ac2 = AlarmClock(alarm_time="20:41", only_weekdays=True, volume_level=85)
+    ac1 = AlarmClock(
+        alarm_time="6:05", only_weekdays=True, volume_level=75,
+        alarm_duration=120
+    )
+    ac2 = AlarmClock(
+        alarm_time="20:41", only_weekdays=True, volume_level=85,
+        alarm_duration=30
+    )
 
     thread1 = Thread(target=ac1.main)
     thread2 = Thread(target=ac2.main)
